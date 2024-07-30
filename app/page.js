@@ -111,7 +111,6 @@ export default function Home() {
           </Stack>
         </Box>
       </Modal>
-      <Button variant='contained' onClick={handleOpen}>Add Item</Button>
       <Box border={'1px solid #333'}>
         <Box 
           width='800px' 
@@ -152,6 +151,7 @@ export default function Home() {
             ))}
           </Stack>
         </Box>
+        <Button variant='contained' onClick={handleOpen}>Add Item</Button>
       </Box>
 )
 }
