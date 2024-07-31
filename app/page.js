@@ -30,7 +30,9 @@ export default function Home() {
   const handleOpen = () => setOpen(true);
   const handleClose = () => setOpen(false);
 
+  // item states
   const [itemName, setItemName] = useState('')
+  const [itemQuantity, setQuantity] = useState(1)
 
   const [pantry, setPantry] = useState([])
 
@@ -94,13 +96,20 @@ export default function Home() {
           <Typography id="modal-modal-title" variant="h6" component="h2">Add Item</Typography>
           <Stack direction={'row'} spacing={2}>
             <TextField 
-              id='outlined-basic' 
               label='Item' 
               variant='outlined' 
               fullWidth
+              autoFocus
               value={itemName}
               onChange={(e) => setItemName(e.target.value)}
             ></TextField>
+            <TextField
+              label='Quantity'
+              varient='outlined'
+              fullWidth
+              value={quantity}
+              onChange={(e) => setQuantity(e.target.value)}>
+            </TextField>
             <Button variant='outlined'
               onClick={() => {
                 addItem(itemName)
@@ -152,6 +161,6 @@ export default function Home() {
           </Stack>
         </Box>
         <Button variant='contained' onClick={handleOpen}>Add Item</Button>
-      </Box>
-)
+    </Box>
+  )
 }
