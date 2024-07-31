@@ -54,8 +54,9 @@ export default function Home() {
     const docRef = doc(collection(firestore, collectionName), item)
     const docSnap = await getDoc(docRef)
     if (docSnap.exists()) {
-      const {count} = docSnap.data()
-      await setDoc(docRef, {count: count + 1})
+      const {count, quantity} = docSnap.data()
+      console.log(docSnap.data())
+      await setDoc(docRef, {count: count})
     } else {
       await setDoc(docRef, {count: 1})
     }
@@ -66,7 +67,7 @@ export default function Home() {
     const docRef = doc(collection(firestore, collectionName), item)
     const docSnap = await getDoc(docRef)
     if (docSnap.exists()) {
-      const {count} = docSnap.data()
+      const {count, quantity} = docSnap.data()
       if (count === 1) {
         await deleteDoc(docRef)
       } else {
@@ -107,7 +108,7 @@ export default function Home() {
               label='Quantity'
               varient='outlined'
               fullWidth
-              value={quantity}
+              value={itemQuantity}
               onChange={(e) => setQuantity(e.target.value)}>
             </TextField>
             <Button variant='outlined'
