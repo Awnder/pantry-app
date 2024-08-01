@@ -2,7 +2,7 @@
 
 import { Box, Stack, Typography, Button, Modal, TextField } from '@mui/material'
 import { firestore } from '@/firebase'
-import { query, collection, doc, getDoc, getDocs, setDoc, deleteDoc, count, charAt} from "firebase/firestore";
+import { query, collection, doc, getDoc, getDocs, setDoc, deleteDoc } from "firebase/firestore";
 import { useEffect, useState } from 'react'
 
 // add item modal styling
@@ -21,18 +21,43 @@ const addItemStyle = {
   gap: 2,
 };
 
-
 export default function Home() {
+  class Food {
+    constructor (name, count, newestDate, oldestDate) {
+      this.name = name
+      this.count = count
+      this.newestDate = newestDate
+      this.oldestDate = oldestDate
+    }
+    toString() {
+      return this.name + ': ' + this.count + ', newest/oldest: ' + this.newestDate + '/' + this.oldestDate
+    }
+  }
+  const foodConverter = {
+    toFirestore: (food) => {
+      return {
+          name: food.name,
+          count: food.count,
+          newestDate: food.newestDate,
+          oldestDate: food.oldestDate
+          };
+    },
+    fromFirestore: (snapshot, options) => {
+        const data = snapshot.data(options);
+        return new Food(data.name, data.count, data.newestDate, data.oldestDate);
+    }
+  }
+
   const collectionName = 'pantry'
 
-  // modal (popup) states
-  const [open, setOpen] = useState(false);
-  const handleOpen = () => setOpen(true);
-  const handleClose = () => setOpen(false);
+  // add modal (popup) states
+  const [openAdd, setOpenAdd] = useState(false);
+  const handleOpenAdd = () => setOpenAdd(true);
+  const handleCloseAdd = () => setOpenAdd(false);
 
   // item states
   const [itemName, setItemName] = useState('')
-  const [itemQuantity, setQuantity] = useState(1)
+  const [itemCount, setItemCount] = useState(1)
 
   const [pantry, setPantry] = useState([])
 
@@ -46,35 +71,41 @@ export default function Home() {
     setPantry(pantryList)
   }
 
-  // useEffect runs when something dependency array changes (if there is no array, runs once upon page load)
+  // useEffect runs when something in dependency array changes (if there is no array, runs once upon page load)
   useEffect(() => { updatePantry() }, [])
 
   // using awaits to ensure processes and promises are resolved before moving on to next steps
-  const addItem = async (item) => {
+  const addItem = async (item, itemCount) => {
     const docRef = doc(collection(firestore, collectionName), item)
     const docSnap = await getDoc(docRef)
     if (docSnap.exists()) {
-      const {count, quantity} = docSnap.data()
-      console.log(docSnap.data())
-      await setDoc(docRef, {count: count})
+      const {count, newest, oldest} = docSnap.data()
+      await setDoc(docRef, {count: count + itemCount, newestDate: todaysDate, oldestDate: oldestDate})
     } else {
-      await setDoc(docRef, {count: 1})
+      await setDoc(docRef, {count: itemCount, newestDate: todaysDate, oldestDate: todaysDate})
     }
     await updatePantry()
   }
 
-  const removeItem = async (item) => {
+  const removeItem = async (item, all) => {
     const docRef = doc(collection(firestore, collectionName), item)
     const docSnap = await getDoc(docRef)
-    if (docSnap.exists()) {
-      const {count, quantity} = docSnap.data()
-      if (count === 1) {
-        await deleteDoc(docRef)
-      } else {
-        await setDoc(docRef, {count: count - 1})
-      }
+    const {count, oldest, newest} = docSnap.data()
+    if (count === 1 || all) {
+      await deleteDoc(docRef)
+    } else {
+      await setDoc(docRef, {count: count - 1}, {oldest}, {newest})
     }
     await updatePantry()
+  }
+
+  const todaysDate = async () => {
+    let today = new Date()
+    let dd = String(today.getDate()).padStart(2, '0');
+    let mm = String(today.getMonth() + 1).padStart(2, '0'); //January is 0!
+    let yyyy = today.getFullYear();
+    today = mm + '/' + dd + '/' + yyyy;
+    return today
   }
 
   return (
@@ -87,20 +118,20 @@ export default function Home() {
       alignItems={'center'}
       gap={2}
     >
+
+      {/* modal popups */}
       <Modal
-        open={open}
-        onClose={handleClose}
-        aria-labelledby="modal-modal-title"
-        aria-describedby="modal-modal-description"
+        open={openAdd}
+        onClose={handleCloseAdd}
+        aria-labelledby="modal-add"
       >
         <Box sx={addItemStyle}>
-          <Typography id="modal-modal-title" variant="h6" component="h2">Add Item</Typography>
+          <Typography id="modal-add" variant="h6" component="h2">Add Item</Typography>
           <Stack direction={'row'} spacing={2}>
             <TextField 
               label='Item' 
               variant='outlined' 
               fullWidth
-              autoFocus
               value={itemName}
               onChange={(e) => setItemName(e.target.value)}
             ></TextField>
@@ -108,19 +139,22 @@ export default function Home() {
               label='Quantity'
               varient='outlined'
               fullWidth
-              value={itemQuantity}
-              onChange={(e) => setQuantity(e.target.value)}>
+              value={itemCount} //e.target.value automatically sets field as str, need to convert to int before storing in firebase
+              onChange={(e) => setItemCount(parseInt(e.target.value))}> 
             </TextField>
             <Button variant='outlined'
               onClick={() => {
-                addItem(itemName)
+                addItem(itemName, itemCount)
                 setItemName('') // empties text field after submission
-                handleClose()
+                setItemCount(1)
+                handleCloseAdd()
               }}
             >Add</Button>
           </Stack>
         </Box>
       </Modal>
+
+      {/* pantry creation */}
       <Box border={'1px solid #333'}>
         <Box 
           width='800px' 
@@ -129,13 +163,14 @@ export default function Home() {
           display={'flex'} 
           justifyContent={'center'} 
           alignItems={'center'} 
+          borderBottom={'1px solid black'}
         >
-          <Typography variant={'h2'} fontFamily={'Segoe UI'} color={'#333'}>
+          <Typography variant={'h2'} fontFamily={'Roboto'} color={'#333'} borderBottom={'1px solid black'} >
             Pantry Items
           </Typography>
         </Box>
           <Stack width='800px' height='400px' spacing={2} overflow={'auto'}>
-            {pantry.map(({name, count}) => (
+            {pantry.map(({name, count, newestDate, oldestDate}) => (
               <Box
                 key={name}
                 width='100%'
@@ -155,13 +190,25 @@ export default function Home() {
               <Typography varient={'h3'} fontFamily={'Segoe UI'} color={'#333'} textAlign={'center'}>
                 Quantity: {count}
               </Typography>
- 
-              <Button variant='contained' onClick={() => removeItem(name)}>Remove</Button>
+              <Typography varient={'h3'} fontFamily={'Segoe UI'} color={'#333'} textAlign={'center'}>
+                Newest: {newestDate}
+              </Typography>
+              <Box
+                display={'flex'}
+                flexDirection={'column'}
+                alignItems={'column'}
+                justifyContent={'space-around'}
+                gap={1}
+                sx={{ py: 1 }}
+              >
+                <Button variant='contained' onClick={() => removeItem(name, false)}>Remove</Button>
+                <Button variant='outlined' color='warning' onClick={() => removeItem(name, true)}>Remove All</Button>
+              </Box>
               </Box>
             ))}
           </Stack>
         </Box>
-        <Button variant='contained' onClick={handleOpen}>Add Item</Button>
+        <Button variant='contained' onClick={handleOpenAdd}>Add Item</Button>
     </Box>
   )
 }
