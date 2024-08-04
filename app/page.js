@@ -1,9 +1,13 @@
 "use client"
 
-import { Box, Stack, Grid, Typography, Button, Modal, TextField, SelectChangeEvent, InputLabel, Select, MenuItem, FormControl } from '@mui/material'
+import { Box, Stack, Grid, Typography, Button, Modal, TextField, FormControl } from '@mui/material'
+import {
+  Unstable_NumberInput as BaseNumberInput,
+  numberInputClasses,
+} from '@mui/base/Unstable_NumberInput';import { styled } from '@mui/system';
 import { firestore } from '@/firebase'
-import { query, collection, doc, getDoc, getDocs, setDoc, deleteDoc, getCountFromServer, getAggregateFromServer, sum } from "firebase/firestore";
-import { useEffect, useState } from 'react'
+import { query, collection, doc, getDoc, getDocs, setDoc, deleteDoc, getAggregateFromServer, sum } from "firebase/firestore";
+import { useEffect, useState, forwardRef } from 'react'
 
 // add item modal styling
 const addItemStyle = {
@@ -21,75 +25,171 @@ const addItemStyle = {
   gap: 2,
 };
 
-/* getting total quantities:
-    const col = collection(firestore, "pantry")
-    const snap = await getAggregateFromServer(col, {totalCount: sum('count')})
-    console.log('count: ', snap.data().totalCount)
-*/
+const NumberInput = forwardRef(function CustomNumberInput(props, ref) {
+  return (
+    <BaseNumberInput
+      slots={{
+        root: numberInputRootStyle,
+        input: numberInputElementStyle,
+      }}
+      {...props}
+      ref={ref}
+    />
+  );
+});
+
+const numberInputRootStyle = styled('div')(
+  ({ theme }) => `
+  font-family: 'IBM Plex Sans', sans-serif;
+  font-weight: 400;
+  border-radius: 8px;
+  color: #1C2025;
+  border: 1px solid #7EB09B;
+  box-shadow: 0px 2px 2px #F3F6F9;
+  display: grid;
+  grid-template-columns: 1fr 19px;
+  grid-template-rows: 1fr 1fr;
+  overflow: hidden;
+  column-gap: 8px;
+  padding: 4px;
+
+  &.${numberInputClasses.focused} {
+    border-color: #7EB09B;
+    box-shadow: 0 0 0 1px #1D3417;
+  }
+
+  &:hover {
+    border-color: #4E826B;
+  }
+
+  // firefox
+  &:focus-visible {
+    outline: 0;
+  }
+`,
+);
+
+const numberInputElementStyle = styled('input')(
+  ({ theme }) => `
+  font-size: 0.875rem;
+  font-family: inherit;
+  font-weight: 400;
+  line-height: 1.5;
+  grid-column: 1/2;
+  grid-row: 1/3;
+  color: #1C2025;
+  background: inherit;
+  border: none;
+  border-radius: inherit;
+  padding: 8px 12px;
+  outline: 0;
+`,
+);
 
 export default function Home() {
-  class Food {
-    constructor (name, count) {
-      this.name = name
-      this.count = count
-    }
-    toString() {
-      return this.name + ': ' + this.count
-    }
-  }
-  const foodConverter = {
-    toFirestore: (food) => {
-      return {
-          name: food.name,
-          count: food.count,
-          };
-    },
-    fromFirestore: (snapshot, options) => {
-        const data = snapshot.data(options);
-        return new Food(data.name, data.count);
-    }
-  }
-
   // add modal (popup) states
-  const [openAdd, setOpenAdd] = useState(false);
-  const handleOpenAdd = () => setOpenAdd(true);
-  const handleCloseAdd = () => setOpenAdd(false);
+  const [openAddPantry, setOpenAddPantry] = useState(false)
+  const handleOpenAddPantry = () => setOpenAddPantry(true)
+  const handleCloseAddPantry = () => setOpenAddPantry(false)
+
+  const [openAddFridge, setOpenAddFridge] = useState(false)
+  const handleOpenAddFridge = () => setOpenAddFridge(true)
+  const handleCloseAddFridge = () => setOpenAddFridge(false)
+
+  const [openAddFreezer, setOpenAddFreezer] = useState(false)
+  const handleOpenAddFreezer = () => setOpenAddFreezer(true)
+  const handleCloseAddFreezer = () => setOpenAddFreezer(false)
 
   // item textfield states in modal
   const [itemName, setItemName] = useState('')
-  const [itemCount, setItemCount] = useState(1)
+  const [itemCount, setItemCount] = useState()
 
-  // inventory select dropdown in modal
-  const [inventoryType, setInventory] = useState('pantry')
-  const handleInventoryChange = (event) => { setInventory(event.target.value) }
+  // handling modal submission
+  const handleSubmit = (e, inventoryName, itemName, itemCount) => {
+    e.preventDefault();
+    if (e.target.checkValidity()) {
+      addItem(inventoryName, itemName, itemCount)
+    } else {
+      alert("Form is invalid! There must be an item and an amount.");
+    }
+  }
+
+  // collection names can be changed here
+  const forPantry = 'pantry'
+  const forFridge = 'fridge'
+  const forFreezer = 'freezer'
 
   // setting base inventory
   const [pantry, setPantry] = useState([])
   const [fridge, setFridge] = useState([])
   const [freezer, setFreezer] = useState([])
+  const [pantryLocal, setPantryLocal] = useState([])
+  const [fridgeLocal, setFridgeLocal] = useState([])
+  const [freezerLocal, setFreezerLocal] = useState([])
 
   // useEffect runs when something in dependency array changes (if there is no array, runs once upon page load)
-  useEffect(() => { updateInventory(inventoryName) }, [])
+  // updates and loads in items on page load
+  useEffect(() => { updatePantry() }, [])
+  useEffect(() => { updateFridge() }, [])
+  useEffect(() => { updateFreezer() }, [])
 
-  const updateInventory = async inventoryName => {
-    const snapshot = query(collection(firestore, inventoryName));
-    const docs = await getDocs(snapshot)
-    const inventoryList = []
-    docs.forEach((doc) => {
-      inventoryList.push({name: doc.id, ...doc.data()}) // spread operator "..." breaks array (collection) into components  
-    })
-
-    switch(inventoryName) {
-      case 'pantry':
-        setPantry(inventoryList)
+  const filterInventory = (item, collectionName) => {
+    switch (collectionName) {
+      case forPantry:
+        setPantryLocal(pantry.filter(f => f.name.toLowerCase().includes(item.target.value)))
         break
-      case 'fridge':
-        setFridge(inventoryList)
+      case forFridge:
+        setFridgeLocal(fridge.filter(f => f.name.toLowerCase().includes(item.target.value)))
         break
-      case 'freezer':
-        setFreezer(inventoryList)
+      case forFreezer:
+        setFreezerLocal(freezer.filter(f => f.name.toLowerCase().includes(item.target.value)))
         break
     }
+  }
+
+  const [pantryFilterValue, setPantryFilterValue] = useState('')
+
+  const clearFilter = collectionName => {
+    switch (collectionName) {
+      case forPantry:
+        setPantryFilterValue('')
+    }
+  }
+
+  // updating inventories - in progress: reducing redundant code
+  // see about combining these and making a init useEffect() or smth
+  const updatePantry = async () => {
+    const snapshot = query(collection(firestore, forPantry))
+    const docs = await getDocs(snapshot)
+    const pantryList = []
+    docs.forEach((doc) => {
+      pantryList.push({name: doc.id, ...doc.data()}) // spread operator "..." breaks array (collection) into components  
+    })
+    setPantry(pantryList)
+    setPantryLocal(pantryList)
+    clearFilter(forPantry)
+  }
+
+  const updateFridge = async () => {
+    const snapshot = query(collection(firestore, forFridge))
+    const docs = await getDocs(snapshot)
+    const fridgeList = []
+    docs.forEach((doc) => {
+      fridgeList.push({name: doc.id, ...doc.data()}) // spread operator "..." breaks array (collection) into components  
+    })
+    setFridge(fridgeList)
+    setFridgeLocal(fridgeList)
+  }
+
+  const updateFreezer = async () => {
+    const snapshot = query(collection(firestore, forFreezer))
+    const docs = await getDocs(snapshot)
+    const freezerList = []
+    docs.forEach((doc) => {
+      freezerList.push({name: doc.id, ...doc.data()}) // spread operator "..." breaks array (collection) into components  
+    })
+    setFreezer(freezerList)
+    setFreezerLocal(freezerList)
   }
 
   // using awaits to ensure processes and promises are resolved before moving on to next steps
@@ -102,7 +202,17 @@ export default function Home() {
     } else {
       await setDoc(docRef, {count: itemCount})
     }
-    await updateInventory(inventoryName)
+
+    switch(inventoryName) {
+      case forPantry:
+        await updatePantry()
+        break
+      case forFridge:
+        await updateFridge()
+        break
+      case forFreezer:
+        await updateFreezer()
+    }
   }
 
   const removeItem = async (inventoryName, item, all) => {
@@ -114,13 +224,17 @@ export default function Home() {
     } else {
       await setDoc(docRef, {count: count - 1})
     }
-    await updateInventory(inventoryName)
-  }
-
-  async function totalItemsInInventory(inventoryName) {
-    let col = collection(firestore, inventoryName)
-    let snap = await getAggregateFromServer(col, {totalCount: sum('count')})
-    return snap.data().totalCount
+    
+    switch(inventoryName) {
+      case forPantry:
+        await updatePantry()
+        break
+      case forFridge:
+        await updateFridge()
+        break
+      case forFreezer:
+        await updateFreezer()
+    }
   }
 
   return (
@@ -133,66 +247,130 @@ export default function Home() {
       alignItems={'center'}
       gap={2}
     >
-
       {/* modal popups */}
-      <Modal
-        open={openAdd}
-        onClose={handleCloseAdd}
-        aria-labelledby="modal-add"
-      >
+      <Modal open={openAddPantry} onClose={handleCloseAddPantry} aria-labelledby="modal-add-pantry">
         <Box sx={addItemStyle}>
-          <Typography id="modal-add" variant="h6" component="h2">Add Item</Typography>
-          <Stack direction={'row'} spacing={2}>
-            <TextField 
-              required
-              label='Item' 
-              variant='outlined' 
-              fullWidth
-              value={itemName}
-              onChange={(e) => setItemName(e.target.value)}
-            ></TextField>
+          <Typography id="modal-add-pantry" variant="h6" component="h2">Add Pantry Item</Typography>
+          <Box 
+            component={'form'} 
+            onSubmit={(e) => {
+              handleSubmit(e, forPantry, itemName, itemCount)
+              setItemName('')
+              setItemCount()
+              handleCloseAddPantry()
+            }} 
+            noValidate
+            sx={{ display: 'flex', flexDirection: 'row' }}
+          >
             <TextField
               required
+              label='Item' 
+              variant='outlined'
+              value={itemName}
+              onChange={(e) => setItemName(e.target.value)}
+              sx={{ marginRight: '10px' }}
+            ></TextField>
+            <NumberInput
+              required
               label='Amount'
-              varient='outlined'
-              fullWidth
-              value={itemCount} //e.target.value automatically sets field as str, need to convert to int before storing in firebase
-              onChange={(e) => setItemCount(parseInt(e.target.value))}> 
-            </TextField>
-            <FormControl fullWidth required>
-              <InputLabel id='inventory-type-label'>Type</InputLabel>
-              <Select
-                labelId='inventory-type-label'
-                label='Type'
-                value={inventoryType}
-                onChange={handleInventoryChange}
-              >
-                <MenuItem value={'pantry'}>Pantry</MenuItem>
-                <MenuItem value={'fridge'}>Fridge</MenuItem>
-                <MenuItem value={'freezer'}>Freezer</MenuItem>
-              </Select>
-            </FormControl>
-            <Button variant='outlined'
-              onClick={() => {
-                console.log(inventoryType)
-                addItem(inventoryType, itemName, itemCount)
-                setItemName('') // empties text field after submission
-                setItemCount(1)
-                handleCloseAdd()
-              }}
-            >Add</Button>
-          </Stack>
+              aria-label="item-count"
+              placeholder="Add amount…"
+              value={itemCount}
+              onChange={(e) => setItemCount(e.target.value)}
+              min={1}
+              sx={{ marginRight: '10px' }}
+            />
+            <Button variant='outlined' color='success' type='submit'>Add</Button>
+          </Box>
+        </Box>
+      </Modal>
+
+      <Modal open={openAddFridge} onClose={handleCloseAddFridge} aria-labelledby="modal-add-fridge">
+        <Box sx={addItemStyle}>
+          <Typography id="modal-add-fridge" variant="h6" component="h2">Add Fridge Item</Typography>
+          <Box 
+            component={'form'} 
+            onSubmit={(e) => {
+              handleSubmit(e, forFridge, itemName, itemCount)
+              setItemName('')
+              setItemCount()
+              handleCloseAddFridge()
+            }} 
+            noValidate
+            sx={{ display: 'flex', flexDirection: 'row' }}
+          >
+            <TextField
+              required
+              label='Item' 
+              variant='outlined'
+              value={itemName}
+              onChange={(e) => setItemName(e.target.value)}
+              sx={{ marginRight: '10px' }}
+            ></TextField>
+            <NumberInput
+              required
+              label='Amount'
+              aria-label="item-count"
+              placeholder="Add amount…"
+              value={itemCount}
+              onChange={(e) => setItemCount(e.target.value)}
+              min={1}
+              sx={{ marginRight: '10px' }}
+            />
+            <Button variant='outlined' color='success' type='submit'>Add</Button>
+          </Box>
+        </Box>
+      </Modal>
+
+      <Modal
+        open={openAddFreezer}
+        onClose={handleCloseAddFreezer}
+        aria-labelledby="modal-add-freezer"
+      >
+        <Box sx={addItemStyle}>
+          <Typography id="modal-add-freezer" variant="h6" component="h2">Add Freezer Item</Typography>
+          <Box 
+            component={'form'} 
+            onSubmit={(e) => {
+              handleSubmit(e, forFreezer, itemName, itemCount)
+              setItemName('')
+              setItemCount()
+              handleCloseAddFreezer()
+            }} 
+            noValidate
+            sx={{ display: 'flex', flexDirection: 'row' }}
+          >
+            <TextField
+              required
+              label='Item' 
+              variant='outlined'
+              value={itemName}
+              onChange={(e) => setItemName(e.target.value)}
+              sx={{ marginRight: '10px' }}
+            ></TextField>
+            <NumberInput
+              required
+              label='Amount'
+              aria-label="item-count"
+              placeholder="Add amount…"
+              value={itemCount}
+              onChange={(e) => setItemCount(e.target.value)}
+              min={1}
+              sx={{ marginRight: '10px' }}
+            />
+            <Button variant='outlined' color='success' type='submit'>Add</Button>
+          </Box>
         </Box>
       </Modal>
 
       {/* Inventory creation */}
-      <Typography variant={'h2'} fontFamily={'Roboto'} color={'#333'} borderBottom={'1px solid black'} >
+      <Typography variant={'h3'} fontFamily={'Roboto'} color={'#333'} borderBottom={'1px solid black'} >
           Inventory Items
       </Typography>
       { /* Pantry Box */ }
       <Box 
         width='80vw'
-        height='20vh'
+        height='25vh'
         bgcolor={'#7EB09B'} 
         display={'flex'} 
         flexDirection={'column'}
@@ -217,15 +395,28 @@ export default function Home() {
             flexDirection={'column'}
             justifyContent={'center'}
             alignItems={'center'}
+            textAlign={'center'}
             border={'1px solid black'}
             borderRadius={'16px'}
+            gap={'5px'}
           >
             <Typography color={'#D3F8CC'}>Pantry Items</Typography>
-            <Button variant='contained' color='success' onClick={handleOpenAdd}>Add Item</Button>
+            <Button variant='contained' color='success' onClick={handleOpenAddPantry}>Add Item</Button>
+            <TextField
+              variant='outlined'
+              color='success'
+              placeholder='Search'
+              value={pantryFilterValue}
+              onChange={(pantryFilterValue) => filterInventory(pantryFilterValue, forPantry)}
+              sx={{ 
+                input: {color: '#D3F8CC'},
+                width: '50%'
+              }}
+            ></TextField>
           </Box>
             { /* Pantry Items */ }
             <Grid container width='80%' height='80%' overflow={'auto'} sx={{ m: 2 }}>
-              {pantry.map(({name, count}) => (
+              {pantryLocal.map(({name, count}) => (
                 <Grid 
                   item
                   xs={12} lg={6} xl={4}
@@ -256,19 +447,19 @@ export default function Home() {
                     gap={1}
                     sx={{ py: 1 }}
                   >
-                    <Button variant='contained' size='small' color='success' onClick={() => removeItem(name, false)}>Remove</Button>
-                    <Button variant='outlined' size='small' color='warning' onClick={() => removeItem(name, true)}>Rmv All</Button>
+                    <Button variant='contained' size='small' color='success' onClick={() => removeItem(forPantry, name, false)}>Remove</Button>
+                    <Button variant='outlined' size='small' color='warning' onClick={() => removeItem(forPantry, name, true)}>Rmv All</Button>
                   </Box>
                 </Grid>
                 ))}
             </Grid>
           </Box>
         </Box>
-
+      
       { /* Fridge Box */ }
       <Box 
         width='80vw'
-        height='20vh'
+        height='25vh'
         bgcolor={'#519E8A'} 
         display={'flex'} 
         flexDirection={'column'}
@@ -295,13 +486,24 @@ export default function Home() {
             alignItems={'center'}
             border={'1px solid black'}
             borderRadius={'16px'}
+            gap={'5px'}
           >
             <Typography color={'#D3F8CC'}>Fridge Items</Typography>
-            <Button variant='contained' color='success' onClick={handleOpenAdd}>Add Item</Button>
+            <Button variant='contained' color='success' onClick={handleOpenAddFridge}>Add Item</Button>
+            <TextField
+              variant='outlined'
+              color='success'
+              placeholder='Search'
+              onChange={(e) => filterInventory(e, forFridge)}
+              sx={{ 
+                input: {color: '#D3F8CC'},
+                width: '50%'
+              }}
+            ></TextField>
           </Box>
             { /* Fridge Items */ }
             <Grid container width='80%' height='80%' overflow={'auto'} sx={{ m: 2 }}>
-              {pantry.map(({name, count}) => (
+              {fridgeLocal.map(({name, count}) => (
                 <Grid 
                   item
                   xs={12} lg={6} xl={4}
@@ -332,8 +534,8 @@ export default function Home() {
                     gap={1}
                     sx={{ py: 1 }}
                   >
-                    <Button variant='contained' size='small' color='success' onClick={() => removeItem(name, false)}>Remove</Button>
-                    <Button variant='outlined' size='small' color='warning' onClick={() => removeItem(name, true)}>Rmv All</Button>
+                    <Button variant='contained' size='small' color='success' onClick={() => removeItem(forFridge, name, false)}>Remove</Button>
+                    <Button variant='outlined' size='small' color='warning' onClick={() => removeItem(forFridge, name, true)}>Rmv All</Button>
                   </Box>
                 </Grid>
                 ))}
@@ -344,7 +546,7 @@ export default function Home() {
       { /* Freezer Box */ }
       <Box 
         width='80vw'
-        height='20vh'
+        height='25vh'
         bgcolor={'#4E826B'} 
         display={'flex'} 
         flexDirection={'column'}
@@ -371,13 +573,24 @@ export default function Home() {
             alignItems={'center'}
             border={'1px solid black'}
             borderRadius={'16px'}
+            gap={'5px'}
           >
             <Typography color={'#D3F8CC'}>Freezer Items</Typography>
-            <Button variant='contained' color='success' onClick={handleOpenAdd}>Add Item</Button>
+            <Button variant='contained' color='success' onClick={handleOpenAddFreezer}>Add Item</Button>
+            <TextField
+              variant='outlined'
+              color='success'
+              placeholder='Search'
+              onChange={(e) => filterInventory(e, forFreezer)}
+              sx={{ 
+                input: {color: '#D3F8CC'},
+                width: '50%'
+              }}
+            ></TextField>
           </Box>
             { /* Freezer Items */ }
             <Grid container width='80%' height='80%' overflow={'auto'} sx={{ m: 2 }}>
-              {pantry.map(({name, count}) => (
+              {freezerLocal.map(({name, count}) => (
                 <Grid 
                   item
                   xs={12} lg={6} xl={4}
@@ -408,8 +621,8 @@ export default function Home() {
                     gap={1}
                     sx={{ py: 1 }}
                   >
-                    <Button variant='contained' size='small' color='success' onClick={() => removeItem(name, false)}>Remove</Button>
-                    <Button variant='outlined' size='small' color='warning' onClick={() => removeItem(name, true)}>Rmv All</Button>
+                    <Button variant='contained' size='small' color='success' onClick={() => removeItem(forFreezer, name, false)}>Remove</Button>
+                    <Button variant='outlined' size='small' color='warning' onClick={() => removeItem(forFreezer, name, true)}>Rmv All</Button>
                   </Box>
                 </Grid>
                 ))}
