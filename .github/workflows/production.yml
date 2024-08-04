@@ -18,7 +18,7 @@ jobs:
             - name: Install Vercel CLI
               run: npm install --global vercel
 
-            - name: Pull Vercel Enviornment Information
+            - name: Pull Vercel Environment Information
               run: vercel pull --yes --environment=production --token=${{ secrets.VERCEL_TOKENS }}
 
             - name: Build Project Artifacts
