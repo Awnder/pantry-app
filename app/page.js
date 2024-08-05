@@ -1,12 +1,12 @@
 "use client"
 
-import { Box, Stack, Grid, Typography, Button, Modal, TextField, FormControl } from '@mui/material'
+import { Box, Grid, Typography, Button, Modal, TextField } from '@mui/material'
 import {
   Unstable_NumberInput as BaseNumberInput,
   numberInputClasses,
 } from '@mui/base/Unstable_NumberInput';import { styled } from '@mui/system';
 import { firestore } from '@/firebase'
-import { query, collection, doc, getDoc, getDocs, setDoc, deleteDoc, getAggregateFromServer, sum } from "firebase/firestore";
+import { query, collection, doc, getDoc, getDocs, setDoc, deleteDoc } from "firebase/firestore";
 import { useEffect, useState, forwardRef } from 'react'
 
 // add item modal styling
@@ -110,7 +110,7 @@ export default function Home() {
     if (e.target.checkValidity()) {
       addItem(inventoryName, itemName, itemCount)
     } else {
-      alert("Form is invalid! There must be an item and an amount.");
+      alert("Item is invalid! There must be an item and an amount.");
     }
   }
 
@@ -246,6 +246,7 @@ export default function Home() {
       justifyContent={'center'}
       alignItems={'center'}
       gap={2}
+      backgroundColor={'#D3F8CC'}
     >
       {/* modal popups */}
       <Modal open={openAddPantry} onClose={handleCloseAddPantry} aria-labelledby="modal-add-pantry">
@@ -364,7 +365,7 @@ export default function Home() {
       </Modal>
 
       {/* Inventory creation */}
-      <Typography variant={'h3'} fontFamily={'Roboto'} color={'#333'} borderBottom={'1px solid black'} >
+      <Typography variant={'h3'} fontFamily={'Roboto'} color={'#333'} borderBottom={'1px solid black'} borderRadius={'7px'}>
           Inventory Items
       </Typography>
       { /* Pantry Box */ }
@@ -405,7 +406,7 @@ export default function Home() {
             <TextField
               variant='outlined'
               color='success'
-              placeholder='Search'
+              placeholder='Search...'
               value={pantryFilterValue}
               onChange={(pantryFilterValue) => filterInventory(pantryFilterValue, forPantry)}
               sx={{ 
@@ -447,7 +448,7 @@ export default function Home() {
                     gap={1}
                     sx={{ py: 1 }}
                   >
-                    <Button variant='contained' size='small' color='success' onClick={() => removeItem(forPantry, name, false)}>Remove</Button>
+                    <Button variant='outlined' size='small' color='success' onClick={() => removeItem(forPantry, name, false)}>Remove</Button>
                     <Button variant='outlined' size='small' color='warning' onClick={() => removeItem(forPantry, name, true)}>Rmv All</Button>
                   </Box>
                 </Grid>
@@ -493,7 +494,7 @@ export default function Home() {
             <TextField
               variant='outlined'
               color='success'
-              placeholder='Search'
+              placeholder='Search...'
               onChange={(e) => filterInventory(e, forFridge)}
               sx={{ 
                 input: {color: '#D3F8CC'},
@@ -534,7 +535,7 @@ export default function Home() {
                     gap={1}
                     sx={{ py: 1 }}
                   >
-                    <Button variant='contained' size='small' color='success' onClick={() => removeItem(forFridge, name, false)}>Remove</Button>
+                    <Button variant='outlined' size='small' color='success' onClick={() => removeItem(forFridge, name, false)}>Remove</Button>
                     <Button variant='outlined' size='small' color='warning' onClick={() => removeItem(forFridge, name, true)}>Rmv All</Button>
                   </Box>
                 </Grid>
@@ -580,7 +581,7 @@ export default function Home() {
             <TextField
               variant='outlined'
               color='success'
-              placeholder='Search'
+              placeholder='Search...'
               onChange={(e) => filterInventory(e, forFreezer)}
               sx={{ 
                 input: {color: '#D3F8CC'},
@@ -621,7 +622,7 @@ export default function Home() {
                     gap={1}
                     sx={{ py: 1 }}
                   >
-                    <Button variant='contained' size='small' color='success' onClick={() => removeItem(forFreezer, name, false)}>Remove</Button>
+                    <Button variant='outlined' size='small' color='success' onClick={() => removeItem(forFreezer, name, false)}>Remove</Button>
                     <Button variant='outlined' size='small' color='warning' onClick={() => removeItem(forFreezer, name, true)}>Rmv All</Button>
                   </Box>
                 </Grid>
