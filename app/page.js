@@ -147,15 +147,6 @@ export default function Home() {
     }
   }
 
-  const [pantryFilterValue, setPantryFilterValue] = useState('')
-
-  const clearFilter = collectionName => {
-    switch (collectionName) {
-      case forPantry:
-        setPantryFilterValue('')
-    }
-  }
-
   // updating inventories - in progress: reducing redundant code
   // see about combining these and making a init useEffect() or smth
   const updatePantry = async () => {
@@ -167,7 +158,6 @@ export default function Home() {
     })
     setPantry(pantryList)
     setPantryLocal(pantryList)
-    clearFilter(forPantry)
   }
 
   const updateFridge = async () => {
@@ -407,8 +397,7 @@ export default function Home() {
               variant='outlined'
               color='success'
               placeholder='Search...'
-              value={pantryFilterValue}
-              onChange={(pantryFilterValue) => filterInventory(pantryFilterValue, forPantry)}
+              onChange={(e) => filterInventory(e, forPantry)}
               sx={{ 
                 input: {color: '#D3F8CC'},
                 width: '50%'
