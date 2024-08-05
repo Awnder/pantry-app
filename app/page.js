@@ -122,6 +122,15 @@ export default function Home() {
     setItemName(result.toLowerCase())
   }
 
+  const handleItemCount = event => {
+    const number = parseInt(event.target.value)
+    if (isNaN(number)) {
+      setItemCount()
+    } else {
+      setItemCount(number)
+    }
+  }
+
   // handling modal submission
   const handleSubmit = (e, inventoryName, itemName, itemCount) => {
     e.preventDefault();
@@ -285,7 +294,9 @@ export default function Home() {
               aria-label="item-count"
               placeholder="Add amount…"
               value={itemCount}
-              onChange={(e) => setItemCount(parseInt(e.target.value))}
+              onChange={(e) => handleItemCount(e)}
+              // when losing focus on numberinput with a value in it, unable to change value when refocusing, onBlur fixes this problem
+              onBlur={(e) => setItemCount()} 
               min={1}
               sx={{ marginRight: '10px' }}
             />
@@ -322,7 +333,9 @@ export default function Home() {
               aria-label="item-count"
               placeholder="Add amount…"
               value={itemCount}
-              onChange={(e) => setItemCount(parseInt(e.target.value))}
+              onChange={(e) => handleItemCount(e)}
+              // when losing focus on numberinput with a value in it, unable to change value when refocusing, onBlur fixes this problem
+              onBlur={(e) => setItemCount()}
               min={1}
               sx={{ marginRight: '10px' }}
             />
@@ -363,7 +376,9 @@ export default function Home() {
               aria-label="item-count"
               placeholder="Add amount…"
               value={itemCount}
-              onChange={(e) => setItemCount(parseInt(e.target.value))}
+              onChange={(e) => handleItemCount(e)}
+              // when losing focus on numberinput with a value in it, unable to change value when refocusing, onBlur fixes this problem
+              onBlur={(e) => setItemCount()}
               min={1}
               sx={{ marginRight: '10px' }}
             />
