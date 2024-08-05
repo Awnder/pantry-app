@@ -3,7 +3,6 @@
 import { firestore } from '@/firebase'
 import { Box, Button, TextField, Typography } from '@mui/material'
 import { useState } from 'react'
-import { Link } from '@mui/material';
 
 export default function Home() {
     const [userEmail, setUserEmail] = useState('')
@@ -12,7 +11,7 @@ export default function Home() {
     const handleSubmit = (e) => {
         e.preventDefault();
         if (e.target.checkValidity()) {
-          () => useRouter().push('./app/page.js')
+          //() => useRouter().push('./app/page.js')
           setUserEmail('')
           setUserPassword('')
         } else {
