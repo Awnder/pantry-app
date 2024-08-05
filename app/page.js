@@ -90,25 +90,43 @@ export default function Home() {
   // add modal (popup) states
   const [openAddPantry, setOpenAddPantry] = useState(false)
   const handleOpenAddPantry = () => setOpenAddPantry(true)
-  const handleCloseAddPantry = () => setOpenAddPantry(false)
+  const handleCloseAddPantry = () => {
+    setOpenAddPantry(false)
+    setItemName('')
+    setItemCount()
+  }
 
   const [openAddFridge, setOpenAddFridge] = useState(false)
   const handleOpenAddFridge = () => setOpenAddFridge(true)
-  const handleCloseAddFridge = () => setOpenAddFridge(false)
+  const handleCloseAddFridge = () => {
+    setOpenAddFridge(false)
+    setItemName('')
+    setItemCount()
+  }
 
   const [openAddFreezer, setOpenAddFreezer] = useState(false)
   const handleOpenAddFreezer = () => setOpenAddFreezer(true)
-  const handleCloseAddFreezer = () => setOpenAddFreezer(false)
+  const handleCloseAddFreezer = () => {
+    setOpenAddFreezer(false)
+    setItemName('')
+    setItemCount()
+  }
 
   // item textfield states in modal
   const [itemName, setItemName] = useState('')
   const [itemCount, setItemCount] = useState()
 
+  // uses regex to only allow alpha characters and spaces (\s)
+  const handleItemName = event => {
+    const result = event.target.value.replace(/[^a-z\s]/gi, '');
+    setItemName(result.toLowerCase())
+  }
+
   // handling modal submission
   const handleSubmit = (e, inventoryName, itemName, itemCount) => {
     e.preventDefault();
-    if (e.target.checkValidity()) {
-      addItem(inventoryName, itemName, itemCount)
+    if (e.target.checkValidity() && itemName.trim() !== '') {
+      addItem(inventoryName, itemName.trim(), itemCount)
     } else {
       alert("Item is invalid! There must be an item and an amount.");
     }
@@ -258,7 +276,7 @@ export default function Home() {
               label='Item' 
               variant='outlined'
               value={itemName}
-              onChange={(e) => setItemName(e.target.value)}
+              onChange={(e) => handleItemName(e)}
               sx={{ marginRight: '10px' }}
             ></TextField>
             <NumberInput
@@ -267,7 +285,7 @@ export default function Home() {
               aria-label="item-count"
               placeholder="Add amount…"
               value={itemCount}
-              onChange={(e) => setItemCount(e.target.value)}
+              onChange={(e) => setItemCount(parseInt(e.target.value))}
               min={1}
               sx={{ marginRight: '10px' }}
             />
@@ -295,7 +313,7 @@ export default function Home() {
               label='Item' 
               variant='outlined'
               value={itemName}
-              onChange={(e) => setItemName(e.target.value)}
+              onChange={(e) => handleItemName(e)}
               sx={{ marginRight: '10px' }}
             ></TextField>
             <NumberInput
@@ -304,7 +322,7 @@ export default function Home() {
               aria-label="item-count"
               placeholder="Add amount…"
               value={itemCount}
-              onChange={(e) => setItemCount(e.target.value)}
+              onChange={(e) => setItemCount(parseInt(e.target.value))}
               min={1}
               sx={{ marginRight: '10px' }}
             />
@@ -336,7 +354,7 @@ export default function Home() {
               label='Item' 
               variant='outlined'
               value={itemName}
-              onChange={(e) => setItemName(e.target.value)}
+              onChange={(e) => handleItemName(e)}
               sx={{ marginRight: '10px' }}
             ></TextField>
             <NumberInput
@@ -345,7 +363,7 @@ export default function Home() {
               aria-label="item-count"
               placeholder="Add amount…"
               value={itemCount}
-              onChange={(e) => setItemCount(e.target.value)}
+              onChange={(e) => setItemCount(parseInt(e.target.value))}
               min={1}
               sx={{ marginRight: '10px' }}
             />
