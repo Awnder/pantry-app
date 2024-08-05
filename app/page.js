@@ -474,6 +474,7 @@ export default function Home() {
             flexDirection={'column'}
             justifyContent={'center'}
             alignItems={'center'}
+            textAlign={'center'}
             border={'1px solid black'}
             borderRadius={'16px'}
             gap={'5px'}
@@ -561,6 +562,7 @@ export default function Home() {
             flexDirection={'column'}
             justifyContent={'center'}
             alignItems={'center'}
+            textAlign={'center'}
             border={'1px solid black'}
             borderRadius={'16px'}
             gap={'5px'}
